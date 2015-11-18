@@ -10,8 +10,9 @@ class Bot:
     pass
 
 class TesterBot3000(Bot, ClassifierSystem):
-    def __init__(self):
+    def __init__(self, key = "NONE"):
         """Initialize the bot's classifiers."""
+        self.key = key
         self.input_interface = []
         ClassifierSystem.__init__(self)
 
@@ -62,7 +63,6 @@ class TesterBot3000(Bot, ClassifierSystem):
         self.expected_pos = self.game.board.to( self.game.hero.pos, retval )
         self.prev_mines = self.game.hero.mines
         self.prev_gold = self.game.hero.gold
-        self._print_classifier_status()
 
         return retval
 

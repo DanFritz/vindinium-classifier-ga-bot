@@ -4,11 +4,17 @@ from classifier import Classifier
 from collections import deque
 
 import random
+import pickle
+import os.path
 
 class ClassifierSystem:
     def __init__(self):
         #self.classifiers = self._get_test_classifiers()
-        self.classifiers = [ self._create_classifier() for x in range(7) ]
+        random.seed()
+        self.classifiers = []
+        self.depickle()
+        if ( not self.classifiers ):
+            self.classifiers = [ self._create_classifier() for x in range(7) ]
         self.active = deque([])
 
     def _create_classifier(self, message = None):
@@ -155,7 +161,7 @@ class ClassifierSystem:
         retval += "END Classifiers\n"
         return retval
 
-    def _print_classifier_status( self ):
+    def print_classifier_status( self ):
         """Output for debugging"""
         print "Classifier status"
         for c in sorted(self.classifiers):
@@ -223,5 +229,16 @@ class ClassifierSystem:
             return action
         else:
             return 'None'
+    def depickle( self ):
+        """Read the classifiers from a file"""
+        if ( os.path.exists('data_'+self.key) ):
+            f = open('data_'+self.key, 'r')
+            self.classifiers = pickle.load( f)
+            f.close()
+    def pickle( self ):
+        """Write the classifiers to a file to be loaded later"""
+        f = open('data_'+self.key, 'w')
+        pickle.dump(self.classifiers, f)
+        f.close()
 
 

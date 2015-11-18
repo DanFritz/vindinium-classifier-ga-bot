@@ -5,6 +5,7 @@ import os
 import sys
 import requests
 import re
+import ga
 from bot import TesterBot3000
 
 TIMEOUT=15
@@ -79,6 +80,8 @@ def run_game(server_url, key, mode, turns, bot):
         state = move(session, url, direction)
 
     # Clean up the session
+    bot.classifiers = ga.step_generation( bot.classifiers )
+    bot.print_classifier_status()
     session.close()
 
 
@@ -101,7 +104,10 @@ if __name__ == "__main__":
             server_url = sys.argv[4]
         else:
             server_url = "http://vindinium.org"
+        bot = TesterBot3000(key)
 
         for i in range(number_of_games):
-            run_game(server_url, key, mode, number_of_turns, TesterBot3000())
+            run_game(server_url, key, mode, number_of_turns, bot)
             print("\nGame finished: %d/%d" % (i+1, number_of_games))
+
+        bot.pickle()
