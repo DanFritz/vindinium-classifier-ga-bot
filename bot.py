@@ -25,6 +25,7 @@ class TesterBot3000(Bot, ClassifierSystem):
         self.expected_pos = self.game.hero.pos
         self.prev_mines = 0
         self.prev_gold = 0
+        print self
 
     def move(self, state):
         """Use the game state to decide what action to take, and then output

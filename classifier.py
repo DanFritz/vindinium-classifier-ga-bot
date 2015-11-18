@@ -28,10 +28,41 @@ class Classifier:
     
     def __init__(self):
         self.conditions = []
+        self.conditions.append( [ None ] * len( Message.game_msg_index) )
         self.strength = 100
         self.specifity = 0
         self.output = None, 'RandomWalk'
         self.identifier = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
+        self.source_classifiers = []
+
+    def __str__(self):
+        retval = ""
+        retval += "Identifier: "
+        retval += self.identifier
+        retval += "\nStrength: "
+        retval += str(self.strength)
+        retval += "\nOutput: "
+        retval += str(self.output)
+        retval += "\nConditions\n"
+        for cond in self.conditions:
+            for i,v in enumerate(cond):
+                retval += "  %30s " % Message.game_msg_def[i] + str(v) + "\n"
+            retval += ""
+        retval += "End"
+        return retval
+
+    def __eq__( self, other ):
+        return ( self.identifier == other.identifier )
+    def __ne__( self, other ):
+        return ( self.identifier != other.identifier )
+    def __lt__( self, other ):
+        return ( self.strength < other.strength )
+    def __le__( self, other ):
+        return ( self.strength <= other.strength )
+    def __gt__( self, other ):
+        return ( self.strength > other.strength )
+    def __ge__( self, other ):
+        return ( self.strength >= other.strength )
 
     def check_activate( self, messages ):
         """Return true if the messages activate the rule."""

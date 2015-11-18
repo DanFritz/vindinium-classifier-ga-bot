@@ -7,15 +7,48 @@ import random
 
 class ClassifierSystem:
     def __init__(self):
-        self.classifiers = self._get_test_classifiers()
+        #self.classifiers = self._get_test_classifiers()
+        self.classifiers = [ self._create_classifier() for x in range(7) ]
         self.active = deque([])
+
+    def _create_classifier(self, message = None):
+        c = Classifier()
+        min_specifity = 10
+
+        # Set condition
+        elements = range(len(Message.game_msg_index))
+        random.shuffle(elements)
+        elements_specifity = [ random.randint(1,5) for x in xrange(len(Message.game_msg_index))]
+        c.specifity = 0
+
+        # Create the condition
+        for i,value in enumerate(elements):
+            c.specifity += 6 - elements_specifity[i]
+            c.conditions[0][value] = \
+                random.sample(xrange(0,5),elements_specifity[i] )
+
+            # Ensure message's value is in the condition
+            if ( message != None ):
+                if ( message.status[i] not in c.conditions[0][value] ):
+                    c.conditions[0][value][0] = message.status[i]
+
+            c.conditions[0][value].sort()
+
+            # Stop adding to the condition sometime after you have > min_specifity
+            if ( c.specifity > min_specifity ):
+                if ( random.random() < float(i) / float(len(Message.game_msg_index) ) ):
+                    break
+
+        # Set output
+        c.output = None, random.choice(['Heal','Mine','Attack','RandomWalk','Wait'])
+        return c
+        
 
     def _get_test_classifiers(self):
         c = [ Classifier() for x in range(7) ]
 
         # If you are less than 1/2 life, go heal
         c[0].identifier = 'heal 1/2 life'
-        c[0].conditions.append( [ None ] * len( Message.game_msg_index) )
         c[0].conditions[0][Message.game_msg_index['source']] = [0]
         c[0].conditions[0][Message.game_msg_index['life']] = [0, 1, 2]
         c[0].specifity = 8
@@ -24,7 +57,6 @@ class ClassifierSystem:
         # If enemy has atleast 1 mine, has less health than you, and is within 2 steps
         # attack him
         c[1].identifier = 'Attack close1'
-        c[1].conditions.append( [ None ] * len( Message.game_msg_index) )
         c[1].conditions[0][Message.game_msg_index['source']] = [0]
         c[1].conditions[0][Message.game_msg_index['near_dist']] = [0, 1]
         c[1].conditions[0][Message.game_msg_index['near_life']] = [0, 1, 2]
@@ -34,7 +66,6 @@ class ClassifierSystem:
 
         # If you have more than 1/2 life, mine
         c[2].identifier = 'Mine Standard'
-        c[2].conditions.append( [ None ] * len( Message.game_msg_index) )
         c[2].conditions[0][Message.game_msg_index['source']] = [0]
         c[2].conditions[0][Message.game_msg_index['life']] = [3, 4, 5]
         c[2].specifity = 8
@@ -42,7 +73,6 @@ class ClassifierSystem:
 
         # If you are next to a mine, and don't have max life, heal
         c[3].identifier = 'Heal at taver'
-        c[3].conditions.append( [ None ] * len( Message.game_msg_index) )
         c[3].conditions[0][Message.game_msg_index['source']] = [0]
         c[3].conditions[0][Message.game_msg_index['life']] = [0, 1, 2, 3, 4]
         c[3].conditions[0][Message.game_msg_index['tavern_dist']] = [0]
@@ -52,7 +82,6 @@ class ClassifierSystem:
         # If you have more mines than anyone else, and there is an enemy
         # approaching, go to the nearest tavern
         c[4].identifier = 'enemy coming '
-        c[4].conditions.append( [ None ] * len( Message.game_msg_index) )
         c[4].conditions[0][Message.game_msg_index['source']] = [0]
         c[4].conditions[0][Message.game_msg_index['rel_mines']] = [3, 4, 5]
         c[4].conditions[0][Message.game_msg_index['tavern_enemy_relative_distance']] = [0, 1, 2, 3]
@@ -61,14 +90,12 @@ class ClassifierSystem:
 
         # Idling rule
         c[5].identifier = 'Idle         '
-        c[5].conditions.append( [ None ] * len( Message.game_msg_index) )
         c[5].conditions[0][Message.game_msg_index['source']] = [0]
         c[5].specifity = 5
         c[5].output = None, 'RandomWalk'
 
         # A bad rule, should lose strength
         c[6].identifier = 'Bad attack   '
-        c[6].conditions.append( [ None ] * len( Message.game_msg_index) )
         c[6].conditions[0][Message.game_msg_index['source']] = [0]
         c[6].conditions[0][Message.game_msg_index['life']] = [0,1,2]
         c[6].conditions[0][Message.game_msg_index['near_dist']] = [0,1,2]
@@ -119,18 +146,27 @@ class ClassifierSystem:
         if ( len(self.active) > 19 ):
             self.active.popleft()
 
+    def __str__( self ):
+        """Output for debugging"""
+        retval = ""
+        retval += "Classifier list\n"
+        for c in self.classifiers:
+            retval += c.__str__()
+        retval += "END Classifiers\n"
+        return retval
+
     def _print_classifier_status( self ):
         """Output for debugging"""
-        print "Classifier info"
-        for c in self.classifiers:
+        print "Classifier status"
+        for c in sorted(self.classifiers):
             count = 0
             for b in self.active:
                 for a in b:
                     if a[0] == c:
                         count += 1
             print c.identifier,
-            print count,
-            print c.strength
+            print c.strength,
+            print count
         print ""
 
     def decide( self ):
@@ -157,7 +193,13 @@ class ClassifierSystem:
                     matches.append( ( c.bid(), c, c.source_classifiers ) )
         print ""
 
-        # TODO if not enough matches, create more classifiers
+        # if not enough matches, create one
+        if ( not matches ):
+            c = self._create_classifier(messages[-1])
+            self.classifiers.append(c)
+            matches.append( ( c.bid(), c, c.source_classifiers ) )
+            print "CREATED NEW CLASSIFIER"
+            print self.classifiers[-1]
 
         # Choose an action from the matches to output
         choice = self._weighted_choice(matches)

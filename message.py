@@ -5,21 +5,23 @@ class Message:
 
     # The message index can be used to refer to a position in the message by
     # what it means
-    game_msg_index = { 'source': 0,
-                       'life': 1,
-                       'rel_mines': 2,
-                       'tavern_dist': 3,
-                       'near_dist': 4,
-                       'near_life': 5,
-                       'near_mine': 6,
-                       'med_dist': 7,
-                       'med_life': 8,
-                       'med_mine': 9,
-                       'far_dist': 10,
-                       'far_life': 11,
-                       'far_mine': 12,
-                       'tavern_enemy_relative_distance': 13,
-                     }
+    game_msg_def = [ 'source',
+                       'life',
+                       'rel_mines',
+                       'tavern_dist',
+                       'near_dist',
+                       'near_life',
+                       'near_mine',
+                       'med_dist',
+                       'med_life',
+                       'med_mine',
+                       'far_dist',
+                       'far_life',
+                       'far_mine',
+                       'tavern_enemy_relative_distance',
+                     ]
+    game_msg_index = { v: i for (i,v) in enumerate(game_msg_def) }
+
     first_enemy_index = game_msg_index['near_dist']
 
     def __init__(self, emitter = None ):
