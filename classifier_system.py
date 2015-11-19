@@ -14,12 +14,20 @@ class ClassifierSystem:
         self.classifiers = []
         self.depickle()
         if ( not self.classifiers ):
-            self.classifiers = [ self._create_classifier() for x in range(7) ]
+            self.classifiers = [ self._create_classifier() for x in range(500) ]
         self.active = deque([])
 
     def _create_classifier(self, message = None):
         c = Classifier()
         min_specifity = 10
+        total_str = 0
+        if self.classifiers:
+            for classify in self.classifiers:
+                total_str += classify.strength
+            average_str = total_str / len(self.classifiers)
+            c.strength = average_str
+        else:
+            c.strength = 100
 
         # Set condition
         elements = range(len(Message.game_msg_index))
@@ -35,8 +43,8 @@ class ClassifierSystem:
 
             # Ensure message's value is in the condition
             if ( message != None ):
-                if ( message.status[i] not in c.conditions[0][value] ):
-                    c.conditions[0][value][0] = message.status[i]
+                if ( message.status[value] not in c.conditions[0][value] ):
+                    c.conditions[0][value][0] = message.status[value]
 
             c.conditions[0][value].sort()
 
@@ -121,6 +129,16 @@ class ClassifierSystem:
             upto += strength
         return None
 
+    def _delayed_disburse( self, amount ):
+        """Disburse the credit to the active classifiers"""
+        for x in range(10,20):
+            if ( x < len(self.active) ):
+                for y in self.active[x]:
+                    c, source_classifiers = y
+                    c.pay( amount / float(11) )
+                    for z in source_classifiers:
+                        z.pay( amount / float(len(source_classifiers)) )
+
     def _disburse( self, amount ):
         """Disburse the credit to the active classifiers"""
         for x in self.active:
@@ -138,16 +156,16 @@ class ClassifierSystem:
         # TODO this does not work if you die on your spawn point
         if ( self.game.hero.pos != self.expected_pos
              and self.game.hero.pos == self.game.hero.spawn ):
-             self._disburse(-100 * self.prev_mines / float(len(self.game.board.mines_list)))
+             self._disburse(-200 * self.prev_mines / float(len(self.game.board.mines_list)))
              self.active = deque([])
         # If you didn't die, pay active classifers by the amount of gold gained
         else:
-            # If you captured a mine, reward
+            # If you captured a mine or killed someone who had mines, reward
             if ( self.game.hero.mines > self.prev_mines ):
                 self._disburse(10 * (self.game.hero.mines - self.prev_mines) )
 
             # For each currently owned mine
-            self._disburse( self.game.hero.mines )
+            self._delayed_disburse( self.game.hero.mines )
 
         if ( len(self.active) > 19 ):
             self.active.popleft()
@@ -165,15 +183,7 @@ class ClassifierSystem:
         """Output for debugging"""
         print "Classifier status"
         for c in sorted(self.classifiers):
-            count = 0
-            for b in self.active:
-                for a in b:
-                    if a[0] == c:
-                        count += 1
-            print c.identifier,
-            print c.strength,
-            print count
-        print ""
+            print "%03d %s %f" % ( c.total_activations,c.identifier,c.strength)
 
     def decide( self ):
         """Decide what action to take this turn"""
@@ -185,11 +195,11 @@ class ClassifierSystem:
         self.input_interface = []
 
         # Find all classifiers that match the input messages
-        print "match",
+        #print "match",
         for c in self.classifiers:
             if ( c.check_activate(messages) ):
-                print c.identifier,
-                print ",",
+                #print c.identifier,
+                #print ",",
                 message, action = c.output
                 if ( None == action ):
                     c.pay(c.bid())
@@ -197,20 +207,20 @@ class ClassifierSystem:
                         self.input_interface.append( message )
                 else:
                     matches.append( ( c.bid(), c, c.source_classifiers ) )
-        print ""
+        #print ""
 
         # if not enough matches, create one
-        if ( not matches ):
+        while ( len( matches ) < 3 ):
             c = self._create_classifier(messages[-1])
             self.classifiers.append(c)
             matches.append( ( c.bid(), c, c.source_classifiers ) )
-            print "CREATED NEW CLASSIFIER"
-            print self.classifiers[-1]
+            #print "CREATED NEW CLASSIFIER"
+            #print self.classifiers[-1]
 
         # Choose an action from the matches to output
         choice = self._weighted_choice(matches)
-        print "choice",
-        print choice
+        #print "choice",
+        #print choice
 
         # activate all of the classifiers that specified the chosen action
         # and send any output messages to the input interface
@@ -221,6 +231,7 @@ class ClassifierSystem:
                 bid, c, source_classifiers = m
                 if c.output[1] == winner:
                     activated.append( (c, source_classifiers ) )
+                    c.total_activations += 1
                     c.pay(-paid)
                     message, action = c.output
                     if ( None != message ):

@@ -67,9 +67,18 @@ def run_game(server_url, key, mode, turns, bot):
     bot.new_game(state)
     print("Playing at: " + state['viewUrl'])
 
+    turn = 0
     while not is_finished(state):
         # Some nice output ;)
-        sys.stdout.write('.')
+        turn += 1
+        gold_totals = "\r" + str(turn) + \
+                " : " + str(bot.game.hero.gold) + \
+                " " + str(bot.game.enemies_list[0].gold) + \
+                " " + str(bot.game.enemies_list[1].gold) + \
+                " " + str(bot.game.enemies_list[2].gold) 
+        #sys.stdout.write('.')
+        sys.stdout.write(gold_totals)
+        
         sys.stdout.flush()
 
         # Choose a move

@@ -28,6 +28,10 @@ class Message:
         self.status = [0] * len(self.game_msg_index)
         self.emitter = emitter
 
+    def __str__(self):
+        print "HIHI"
+        return str(self.status)
+
     def _relative_tavern_enemy_distance( self, tavern_dist, enemy_dist ):
         relative = tavern_dist - enemy_dist
         if ( relative > 6 ):
@@ -154,7 +158,7 @@ class Message:
                 self.status[index] = v
                 index +=1
         self.status[self.game_msg_index['tavern_enemy_relative_distance']] = self._relative_tavern_enemy_distance( tavern_dist, enemy_status[0]['dist'] )
-        print self.status
+        #print self.status
 
     def rule_matches(self,condition):
         """Return true if a given condition matches the message.

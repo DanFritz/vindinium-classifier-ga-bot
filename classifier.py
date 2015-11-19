@@ -34,6 +34,7 @@ class Classifier:
         self.output = None, 'RandomWalk'
         self.identifier = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
         self.source_classifiers = []
+        self.total_activations = 0
 
     def __str__(self):
         retval = ""
@@ -48,11 +49,47 @@ class Classifier:
             for i,v in enumerate(cond):
                 retval += "  %30s " % Message.game_msg_def[i] + str(v) + "\n"
             retval += ""
-        retval += "End"
+        retval += "End\n"
         return retval
 
+    def remove_other_subset( self, other ):
+        """Remove the specified value of other from self"""
+        for i, cond in enumerate(self.conditions):
+            for j, x in enumerate(cond):
+                if ( x != None or other.conditions[i][j] != None ):
+                    if ( x != None ):
+                        new_x = x[:]
+                    else:
+                        new_x = range(6)
+                    if ( other.conditions[i][j] != None 
+                        and new_x != other.conditions[i][j] ):
+                        for y in other.conditions[i][j]:
+                            if y in new_x:
+                                new_x.remove(y)
+                                self.specifity += 1
+                    self.conditions[i][j] = new_x
+
+    def is_subset( self, other ):
+        """Check to see if other is a subset of self"""
+        if ( self.output != other.output ):
+            return False
+        for i, cond in enumerate(self.conditions):
+            for j, x in enumerate(cond):
+                if ( x != None ):
+                    if ( other.conditions[i][j] == None ):
+                        return False
+                    for y in other.conditions[i][j]:
+                        if ( y not in x ):
+                            return False
+        return True
     def __eq__( self, other ):
-        return ( self.identifier == other.identifier )
+        """Check to see if other is a subset of self"""
+        if ( self.output != other.output ):
+            return False
+        if ( self.conditions != other.conditions ):
+            return False
+
+        return True
     def __ne__( self, other ):
         return ( self.identifier != other.identifier )
     def __lt__( self, other ):

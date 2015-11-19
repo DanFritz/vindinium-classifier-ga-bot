@@ -26,19 +26,20 @@ class TesterBot3000(Bot, ClassifierSystem):
         self.expected_pos = self.game.hero.pos
         self.prev_mines = 0
         self.prev_gold = 0
-        print self
+        for c in self.classifiers:
+            c.total_activations = 0
 
     def move(self, state):
         """Use the game state to decide what action to take, and then output
            the direction to move."""
         self.game.update(state)
-        print "Score :",
-        print self.game.hero.gold,
-        for pos,b in self.game.enemies.iteritems():
-            print b.gold,
-        print ""
+        #print "Score :",
+        #print self.game.hero.gold,
+        #for pos,b in self.game.enemies.iteritems():
+            #print b.gold,
+        #print ""
 
-        self.game.board.print_board(state['game']['board']['tiles'])
+        #self.game.board.print_board(state['game']['board']['tiles'])
 
         message = Message()
         message.game_message(self.game)
