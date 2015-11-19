@@ -28,7 +28,7 @@ def compactify( classifiers ):
     print "Compactifying"
     to_be_removed = []
     for a,b in itertools.combinations( classifiers, 2 ):
-        if ( a == b ):
+        if ( a == b and b not in to_be_removed and a not in to_be_removed ):
             if ( a.strength > b.strength ):
                 to_be_removed.append(b)
             else:
@@ -128,7 +128,7 @@ def create_offspring( breeders ):
                                 cond[index] = None
                             kid.specifity -= 1
                 if ( random.random() < 0.01 ):
-                    kid.output = None, random.choice(['Heal','Mine','Attack','RandomWalk','Wait'])
+                    kid.output = None, random.choice(['Heal','Mine','Attack','Wait'])
                             
             print "    %s and %s Made %s." % (mom.identifier, dad.identifier, kid.identifier )
             #print kid

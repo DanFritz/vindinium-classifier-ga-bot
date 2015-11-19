@@ -57,8 +57,6 @@ class TesterBot3000(Bot, ClassifierSystem):
         elif ( out == 'Attack' ):
             if ( None != self.game.enemies_list[0].path ):
                 retval = self.game.enemies_list[0].path[0]
-        elif ( out == 'RandomWalk' ):
-            retval = random.choice(['North','South','East','West','Stay'])
         elif ( out == 'Wait' ):
             retval = 'Stay'
         self.expected_pos = self.game.board.to( self.game.hero.pos, retval )

@@ -6,6 +6,7 @@ import sys
 import requests
 import re
 import ga
+import time
 from bot import TesterBot3000
 
 TIMEOUT=15
@@ -92,6 +93,7 @@ def run_game(server_url, key, mode, turns, bot):
     bot.classifiers = ga.step_generation( bot.classifiers )
     bot.print_classifier_status()
     session.close()
+    time.sleep(2)
 
 
 if __name__ == "__main__":

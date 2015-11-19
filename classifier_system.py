@@ -54,7 +54,7 @@ class ClassifierSystem:
                     break
 
         # Set output
-        c.output = None, random.choice(['Heal','Mine','Attack','RandomWalk','Wait'])
+        c.output = None, random.choice(['Heal','Mine','Attack','Wait'])
         return c
         
 
@@ -106,7 +106,7 @@ class ClassifierSystem:
         c[5].identifier = 'Idle         '
         c[5].conditions[0][Message.game_msg_index['source']] = [0]
         c[5].specifity = 5
-        c[5].output = None, 'RandomWalk'
+        c[5].output = None, 'Wait'
 
         # A bad rule, should lose strength
         c[6].identifier = 'Bad attack   '

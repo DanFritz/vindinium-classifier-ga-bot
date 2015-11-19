@@ -31,7 +31,7 @@ class Classifier:
         self.conditions.append( [ None ] * len( Message.game_msg_index) )
         self.strength = 100
         self.specifity = 0
-        self.output = None, 'RandomWalk'
+        self.output = None, 'Wait'
         self.identifier = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
         self.source_classifiers = []
         self.total_activations = 0
