@@ -7,10 +7,8 @@ class Classifier:
     """A classifier consists of two parts.
         1. The rule is used to match against messages for when the classifier activates.
         2. The output consists of a list of messages to be added to the message queue"""
-    # TODO add classifier strength as described in the paper.
-
     # NOTE Rules are created using the following alphabet
-    # {None(Matches any value), [0], [1], [2], [3], [4], [5],
+    # {None(The don't care state), [0], [1], [2], [3], [4], [5],
     #   [0,1], [0,2], [0,3], [0,4], [0,5],
     #   [1,2], [1,3], [1,4], [1,5],
     #   [2,3], [2,4], [2,5],
@@ -34,23 +32,36 @@ class Classifier:
         self.output = None, 'Wait'
         self.identifier = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
         self.source_classifiers = []
+        self.game_activations = 0
         self.total_activations = 0
+        self.age = 0
 
     def __str__(self):
         retval = ""
         retval += "Identifier: "
         retval += self.identifier
-        retval += "\nStrength: "
+        retval += "\n  Strength: "
         retval += str(self.strength)
-        retval += "\nOutput: "
+        retval += "\n  Output: "
         retval += str(self.output)
-        retval += "\nConditions\n"
+        retval += "\n  Specifity: "
+        retval += str(self.specifity)
+        retval += "\n  Conditions\n"
         for cond in self.conditions:
             for i,v in enumerate(cond):
-                retval += "  %30s " % Message.game_msg_def[i] + str(v) + "\n"
-            retval += ""
-        retval += "End\n"
+                retval += "    %30s " % Message.game_msg_def[i] + str(v) + "\n"
         return retval
+
+    def print_status(self):
+        return "%s %3d %5d %3d %2d %6s %f" % ( self.identifier, self.age, self.total_activations, self.game_activations, self.specifity, self.output[1], self.strength )
+
+    def new_game(self):
+        self.game_activations = 0
+
+    def game_over(self):
+        self.total_activations += self.game_activations
+        self.age += 1
+
 
     def remove_other_subset( self, other ):
         """Remove the specified value of other from self"""
@@ -103,6 +114,8 @@ class Classifier:
 
     def check_activate( self, messages ):
         """Return true if the messages activate the rule."""
+        if ( self.strength <= 0 ):
+            return False
         conditions_to_match = self.conditions[:]
         self.source_classifiers = []
         for m in messages:
@@ -116,9 +129,13 @@ class Classifier:
         return False
                 
     def bid( self ):
-        bid = 0.1 * ( self.specifity / float( 5 * len(Message.game_msg_index) ) ) * self.strength
+        bid = 0.05 * ( self.specifity / float( 5 * len(Message.game_msg_index) ) ) * self.strength
         return bid
     def pay( self, paid ):
         self.strength += paid
         if ( self.strength < 0 ):
             self.strength = 0
+    def activate( self, price ):
+        """Pay the price and count a classifier activation"""
+        self.pay(-price)
+        self.game_activations += 1

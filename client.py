@@ -5,7 +5,6 @@ import os
 import sys
 import requests
 import re
-import ga
 import time
 from bot import TesterBot3000
 
@@ -76,7 +75,9 @@ def run_game(server_url, key, mode, turns, bot):
                 " : " + str(bot.game.hero.gold) + \
                 " " + str(bot.game.enemies_list[0].gold) + \
                 " " + str(bot.game.enemies_list[1].gold) + \
-                " " + str(bot.game.enemies_list[2].gold) 
+                " " + str(bot.game.enemies_list[2].gold) + \
+                " " + str(len(bot.matches)) + \
+                " " + bot.action.rjust(8)
         #sys.stdout.write('.')
         sys.stdout.write(gold_totals)
         
@@ -90,8 +91,7 @@ def run_game(server_url, key, mode, turns, bot):
         state = move(session, url, direction)
 
     # Clean up the session
-    bot.classifiers = ga.step_generation( bot.classifiers )
-    bot.print_classifier_status()
+    bot.finish_game()
     session.close()
     time.sleep(2)
 

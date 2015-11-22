@@ -225,8 +225,10 @@ class Mine:
         self.me = False
         self._owner_char_index = owner_char_index
         self.set_value()
+        self.neighbor_value = 0
 
     def update_owner(self, tiles, me_ident):
+        """Check the current board string to update mine owner"""
         if '-' == tiles[self._owner_char_index]:
             self.owner = None
         else:
@@ -237,14 +239,17 @@ class Mine:
                 self.me = False
 
     def set_value(self):
+        """Value of a mine is the distance from the player minus that mines value, -2 if it is someone else's mine currently"""
         if ( None == self.path ):
             self.value = 999
         elif ( None == self.owner ):
-            self.value = len(self.path)
+            self.value = len(self.path) - self.neighbor_value
         elif ( not self.me ):
-            self.value = len(self.path) + 2
+            self.value = len(self.path) - 1 - self.neighbor_value
         else:
             self.value = 999
+        if (self.value < 0 ):
+            self.value = 0
     def get_value(self):
         return self.value
 
@@ -277,6 +282,36 @@ class Board:
         self.mines = {}
         self.mines_list = []
         self.tiles = self._parseTiles(board['tiles'])
+        self.define_mine_neighbor_value()
+
+
+    def define_mine_neighbor_value(self):
+        """Determine the value of a mine by checking neighboring locations to see if other mines are close by"""
+        for pos,mine in self.mines.iteritems():
+            distance = 4
+            frontier_queue = deque([])
+            frontier_dict = {}
+            frontier_dict[pos] = (distance, pos)
+            explored = {}
+            frontier_queue.append( (distance, pos ) )
+            while distance > 0 and frontier_queue:
+                node = frontier_queue.popleft()
+                distance, loc = node
+                distance -= 1
+                del frontier_dict[loc]
+                explored[loc] = node
+                for direction,coords in enumerate(AIM):
+                    next_loc = self.to(loc, coords)
+                    if next_loc:
+                        next_node = ( distance, next_loc )
+                        if (next_loc not in explored
+                                and next_loc not in frontier_dict):
+                            if ( self.passable(next_loc)):
+                                frontier_queue.append( next_node )
+                                frontier_dict[next_loc] = next_node
+                            elif ( next_loc in self.mines ):
+                                mine.neighbor_value += 1
+                                explored[next_loc] = next_node
 
     def passable(self, loc):
         'true if can walk through'
@@ -294,9 +329,9 @@ class Board:
         n_col = col + d_col
         if (n_col < 0): return None
         if (n_col >= self.size): return None
-
         return (n_row, n_col)
     def print_board(self, tiles):
+        """Print an ascii representation of the game board"""
         vector = [tiles[i:i+2] for i in range(0, len(tiles), 2)]
         matrix = [vector[i:i+self.size] for i in range(0, len(vector), self.size)]
         for m in matrix:
@@ -305,6 +340,7 @@ class Board:
             print "\""
 
 class Hero:
+    """Contains all the information for a player"""
     def __init__(self, hero, me):
         self.ident = hero['id']
         self.name = hero['name']
@@ -317,6 +353,7 @@ class Hero:
         self.me = me
         self.set_value()
     def set_value(self):
+        """value of a hero is the distance from the player to that hero's position"""
         if ( self.me ):
             self.value = 999
         elif ( None == self.path ):

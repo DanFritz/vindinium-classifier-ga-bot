@@ -9,6 +9,7 @@ class Message:
                        'life',
                        'rel_mines',
                        'tavern_dist',
+                       'prev_decision',
                        'near_dist',
                        'near_life',
                        'near_mine',
@@ -20,8 +21,9 @@ class Message:
                        'far_mine',
                        'tavern_enemy_relative_distance',
                      ]
-    game_msg_index = { v: i for (i,v) in enumerate(game_msg_def) }
 
+    decisions = ['Heal','Mine','Attack','Wait','None']
+    game_msg_index = { v: i for (i,v) in enumerate(game_msg_def) }
     first_enemy_index = game_msg_index['near_dist']
 
     def __init__(self, emitter = None ):
@@ -29,7 +31,6 @@ class Message:
         self.emitter = emitter
 
     def __str__(self):
-        print "HIHI"
         return str(self.status)
 
     def _relative_tavern_enemy_distance( self, tavern_dist, enemy_dist ):
@@ -113,20 +114,21 @@ class Message:
         return int( ( mines / float(len( total_mines )) ) * 6 - 0.01)
 
 
-    def game_message(self,game):
+    def game_message(self,bot):
 
         # Indicate message source is the game status
         self.status[self.game_msg_index['source']] = 0
 
         self.status[self.game_msg_index['life']] = \
-            int( ( game.hero.life / 100.0 ) * 6 - 0.01) 
+            int( ( bot.game.hero.life / 100.0 ) * 6 - 0.01) 
         self.status[self.game_msg_index['rel_mines']] = \
-            self._relative_mines( game.hero.mines, len( game.board.mines_list), game.enemies )
+            self._relative_mines( bot.game.hero.mines, len( bot.game.board.mines_list), bot.game.enemies )
+        self.status[self.game_msg_index['prev_decision']] = Message.decisions.index(bot.action)
 
-        if ( None == game.board.taverns_list[0].path):
+        if ( None == bot.game.board.taverns_list[0].path):
             tavern_dist = 999
         else:
-            tavern_dist = len(game.board.taverns_list[0].path)
+            tavern_dist = len(bot.game.board.taverns_list[0].path)
         self.status[self.game_msg_index['tavern_dist']] = \
             self._relative_distance( tavern_dist )
   
@@ -136,7 +138,7 @@ class Message:
         enemy_status = [ { 'dist': 0, 'values': [0] * len(enemy_msg_index) }
             for x in range(3) ]
         i = 0
-        for pos,enemy in game.enemies.iteritems():
+        for pos,enemy in bot.game.enemies.iteritems():
             if ( None == enemy.path):
                 distance = 999
             else:
@@ -145,9 +147,9 @@ class Message:
             enemy_status[i]['values'][enemy_msg_index['dist']] = \
                 self._relative_distance(distance)
             enemy_status[i]['values'][enemy_msg_index['life']] = \
-                self._relative_life( enemy.life, game.hero.life )
+                self._relative_life( enemy.life, bot.game.hero.life )
             enemy_status[i]['values'][enemy_msg_index['mine']] = \
-                self._absolute_mines( enemy.mines, game.board.mines )
+                self._absolute_mines( enemy.mines, bot.game.board.mines )
             i += 1
 
         # Enter the information for each enemy into the message sorted by proximity
