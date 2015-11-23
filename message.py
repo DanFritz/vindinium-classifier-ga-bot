@@ -1,3 +1,5 @@
+import random
+
 class Message:
     """Messages consist of a status list. that convey meaning on aspects of the
        current state.  The message is created using the alphabet
@@ -31,6 +33,8 @@ class Message:
         self.emitter = emitter
 
     def __str__(self):
+        return str(self.status)
+    def __repr__(self):
         return str(self.status)
 
     def _relative_tavern_enemy_distance( self, tavern_dist, enemy_dist ):
@@ -115,7 +119,6 @@ class Message:
 
 
     def game_message(self,bot):
-
         # Indicate message source is the game status
         self.status[self.game_msg_index['source']] = 0
 
@@ -161,6 +164,11 @@ class Message:
                 index +=1
         self.status[self.game_msg_index['tavern_enemy_relative_distance']] = self._relative_tavern_enemy_distance( tavern_dist, enemy_status[0]['dist'] )
         #print self.status
+    def classifier_message(self):
+        self.status[self.game_msg_index['source']] = random.choice([1,2,3,4,5])
+        for i in range( 1, len(self.status) ):
+            self.status[i] = random.choice([0,1,2,3,4,5])
+
 
     def rule_matches(self,condition):
         """Return true if a given condition matches the message.

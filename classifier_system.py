@@ -18,8 +18,8 @@ class ClassifierSystem:
         self.classifiers = []
         self.depickle()
         if ( not self.classifiers ):
-            self.classifiers = [ self._create_classifier() for x in range(50) ]
-        self.max_active = 10
+            self.classifiers = [ self._create_classifier() for x in range(500) ]
+        self.max_active = 4
         self.active = deque([])
         self.matches = []
 
@@ -43,25 +43,38 @@ class ClassifierSystem:
         c.specifity = 0
 
         # Create the condition
+        condition_num = 0
         for i,value in enumerate(elements):
             c.specifity += 6 - elements_specifity[i]
-            c.conditions[0][value] = \
+            c.conditions[condition_num][value] = \
                 random.sample(xrange(0,5),elements_specifity[i] )
 
             # Ensure message's value is in the condition
             if ( message != None ):
-                if ( message.status[value] not in c.conditions[0][value] ):
-                    c.conditions[0][value][0] = message.status[value]
+                if ( message.status[value] not in c.conditions[condition_num][value] ):
+                    c.conditions[condition_num][value][0] = message.status[value]
 
-            c.conditions[0][value].sort()
+            c.conditions[condition_num][value].sort()
 
             # Stop adding to the condition sometime after you have > min_specifity
             if ( c.specifity > min_specifity ):
                 if ( random.random() < float(i) / float(len(Message.game_msg_index) ) ):
                     break
+            if ( random.random() < 0.01 and c.specifity < min_specifity * 0.3 and len(c.conditions) == 1 ):
+                c.conditions.append( [ None ] * len( Message.game_msg_index) )
+                condition_num +=1
 
         # Set output
-        c.output = None, random.choice(['Heal','Mine','Attack','Wait'])
+        if (random.random() < 0.1):
+            while True:
+                output_message = Message()
+                output_message.classifier_message()
+                output_message.emitter = c
+                if ( not c.self_activates() ):
+                    break
+        else:
+            output_message = None
+        c.output = output_message, random.choice(['Heal','Mine','Attack','Wait'])
         return c
         
 
@@ -137,6 +150,15 @@ class ClassifierSystem:
             upto += strength
         return None
 
+    def _single_disburse( self, amount ):
+        """Disburse the credit to the active classifiers"""
+        if ( len( self.active ) > 0 ):
+            for y in self.active[-1]:
+                c, source_classifiers = y
+                c.pay( amount )
+                for z in source_classifiers:
+                    z.pay( amount / float(len(source_classifiers)) )
+
     def _delayed_disburse( self, amount ):
         """Disburse the credit to the active classifiers"""
         if ( len( self.active ) >= 2 ):
@@ -165,23 +187,49 @@ class ClassifierSystem:
         # TODO this does not work if you die on your spawn point
         if ( self.game.hero.pos != self.expected_pos
              and self.game.hero.pos == self.game.hero.spawn ):
-             self._disburse(-10 * self.prev_mines )
+
+             self._disburse(-15 * self.prev_mines )
              self.active = deque([])
         # If you didn't die, pay active classifers by the amount of gold gained
         else:
             # If you captured a mine or killed someone who had mines, reward
             if ( self.game.hero.mines > self.prev_mines ):
-                self._disburse(10 * (self.game.hero.mines - self.prev_mines) )
+                self._single_disburse(10 * (self.game.hero.mines - self.prev_mines) )
+                self.healing_loop = 0
 
             # Reward for gold earned
-            self._disburse( self.game.hero.gold - self.prev_gold )
+            #self._disburse( self.game.hero.gold - self.prev_gold )
             
             # Reward for healing
             if ( self.game.hero.life > self.prev_life and self.prev_life < 81 ):
-                self._disburse(10 * self.game.hero.mines )
+                # Prevent healing loop
+                if ( self.healing_loop < 4 ):
+                    self._single_disburse(10 * self.game.hero.mines )
+                self.healing_loop += 1
 
         if ( len(self.active) >= self.max_active ):
             self.active.popleft()
+    def _end_of_game_credit_allocation( self ):
+        """Disburse credit based on number of allocations in the game, and the game result"""
+        reward = 0
+        enemies = sorted( self.game.enemies_list, key = lambda x: x.gold )
+        if ( self.game.hero.gold <= enemies[0].gold * 0.5 ):
+            reward = -0.2
+        elif ( self.game.hero.gold <= enemies[0].gold ):
+            reward = 0
+        elif ( self.game.hero.gold < enemies[1].gold ):
+            reward = 0.3
+        elif ( self.game.hero.gold < enemies[2].gold ):
+            reward = 1
+        elif ( self.game.hero.gold < enemies[2].gold * 1.5 ):
+            reward = 2
+        else:
+            reward = 3
+        for c in self.classifiers:
+            c.pay(reward*c.game_activations)
+
+
+
 
     def __str__( self ):
         """Output for debugging"""
@@ -256,9 +304,11 @@ class ClassifierSystem:
         """Initialize the bot with a new game."""
         for c in self.classifiers:
             c.new_game()
+        self.healing_loop = 0
 
     def finish_game(self):
         """End of game cleanup tasks"""
+        self._end_of_game_credit_allocation()
         for c in self.classifiers:
             c.game_over()
         print "Maximum classifier strength before normalization = %f" % self.classifiers[-1].strength

@@ -46,11 +46,17 @@ class Classifier:
         retval += str(self.output)
         retval += "\n  Specifity: "
         retval += str(self.specifity)
+        retval += "\n  Total Activations: "
+        retval += str(self.total_activations)
+        retval += "\n  Game Activations: "
+        retval += str(self.game_activations)
         retval += "\n  Conditions\n"
         for cond in self.conditions:
             for i,v in enumerate(cond):
                 retval += "    %30s " % Message.game_msg_def[i] + str(v) + "\n"
         return retval
+    def __repr__(self):
+        return str(self)
 
     def print_status(self):
         return "%s %3d %5d %3d %2d %6s %f" % ( self.identifier, self.age, self.total_activations, self.game_activations, self.specifity, self.output[1], self.strength )
@@ -95,6 +101,8 @@ class Classifier:
         return True
     def __eq__( self, other ):
         """Check to see if other is a subset of self"""
+        if ( not isinstance(other,Classifier) ):
+            return False
         if ( self.output != other.output ):
             return False
         if ( self.conditions != other.conditions ):
@@ -102,7 +110,13 @@ class Classifier:
 
         return True
     def __ne__( self, other ):
-        return ( self.identifier != other.identifier )
+        if ( not isinstance(other,Classifier) ):
+            return True
+        if ( self.output != other.output ):
+            return True
+        if ( self.conditions != other.conditions ):
+            return True
+        return False
     def __lt__( self, other ):
         return ( self.strength < other.strength )
     def __le__( self, other ):
@@ -127,9 +141,16 @@ class Classifier:
             if len(conditions_to_match) == 0:
                 return True
         return False
+
+    def self_activates( self ):
+        if ( self.output[0] == None ):
+            return False
+        if ( self.check_activate([self.output[0]])):
+            return True
+        return False
                 
     def bid( self ):
-        bid = 0.05 * ( self.specifity / float( 5 * len(Message.game_msg_index) ) ) * self.strength
+        bid = 0.02 * ( self.specifity / float( 5 * len(Message.game_msg_index) ) ) * self.strength
         return bid
     def pay( self, paid ):
         self.strength += paid
@@ -139,3 +160,5 @@ class Classifier:
         """Pay the price and count a classifier activation"""
         self.pay(-price)
         self.game_activations += 1
+    def breeding_value( self ):
+        return self.strength + self.specifity * 5

@@ -49,7 +49,7 @@ def kill_the_weak( classifiers, quota ):
     print "Killing the weak"
     new_list = []
     for i,c in enumerate(classifiers):
-        if ( c.strength == 0 or ( quota > 0 and random.random() > float( deleted ) / quota ) ):
+        if ( c.strength <= 0 or ( quota > 0 and random.random() > float( deleted ) / quota ) ):
             print "  Killing %s strength %f." % (c.identifier, c.strength)
             deleted += 1
         else:
@@ -57,18 +57,22 @@ def kill_the_weak( classifiers, quota ):
     return new_list
 
 def select_breeders( classifiers, quota ):
+    classifiers.sort( key = Classifier.breeding_value )
     classifiers.reverse()
     selected = 0
     print "Selecting the strong"
     new_list = []
+    total_breeder_specifity = 0
+    average_breeder_specifity = 0
+
     for i,c in enumerate(classifiers):
-        # Do not breed classifiers that have not proven themselves
-        if ( c.total_activations > 0 and random.random() > float( selected ) / quota ):
-            print "  Breeding %s strength %f." % (c.identifier, c.strength)
-            new_list.append(c)
-            selected += 1
-        if ( selected >= quota ):
-            break
+        # Do not breed classifiers that have never been used
+        if ( c.total_activations > 0 ):
+            if ( random.random() > float( selected ) / quota ):
+                print "  Breeding %s strength %f specifity %d." % (c.identifier, c.strength, c.specifity)
+                new_list.append(c)
+                selected += 1
+
     return new_list
 
 def create_offspring( breeders ):
@@ -88,8 +92,9 @@ def create_offspring( breeders ):
             kid.game_activations = 0
             kid.total_activations = 0
             kid.identifier = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
-            kid.strength = (mom.strength + dad.strength ) / 2 - 20
+            kid.strength = (mom.strength + dad.strength ) / 2
             kid.specifity = 0
+            mutation_chance = random.random()
             for j,cond in enumerate(kid.conditions):
                 if ( j < len ( dad.conditions ) ):
                     division1 = random.randrange( 1, len(Message.game_msg_def) )
@@ -102,8 +107,8 @@ def create_offspring( breeders ):
                             kid.specifity += 6 - len( cond[l] )
                         l += 1
                 # Chance of mutation
-                mutation_chance = random.random()
-                if ( mutation_chance < 0.02 ):
+                if ( mutation_chance < 0.01 / len(kid.conditions) + j * 0.02 / len(kid.conditions)
+                    and mutation_chance > 0.02 / len(kid.conditions) * j ):
                     index = random.randrange( len( Message.game_msg_def ) )
                     if ( cond[index] == None ):
                         cond[index] = random.sample(xrange(6),5)
@@ -126,9 +131,8 @@ def create_offspring( breeders ):
                             else:
                                 cond[index] = None
                             kid.specifity -= 1
-                elif ( mutation_chance < 0.03 ):
-                    kid.output = None, random.choice(['Heal','Mine','Attack','Wait'])
-                elif ( mutation_chance < 0.05 ):
+                elif ( mutation_chance < 0.02 / len(kid.conditions) + j * 0.02 / len(kid.conditions)
+                    and mutation_chance > 0.02 / len(kid.conditions) * j ):
                     index = random.randrange( len( Message.game_msg_def ) )
                     swap_index = index
                     while ( index == swap_index ):
@@ -136,6 +140,18 @@ def create_offspring( breeders ):
                     tmp = cond[index]
                     cond[index] = cond[swap_index]
                     cond[swap_index] = tmp
+            # Chance of mutation of output
+            if ( mutation_chance < 0.04 and mutation_chance > 0.02 ):
+                msg, act = kid.output
+                if ( mutation_chance < 0.03 and mutation_chance > 0.02 ):
+                    if ( random.random() < 0.1 ):
+                        msg = Message()
+                        msg.classifier_message()
+                    else:
+                        msg = None
+                elif ( mutation_chance < 0.04 and mutation_chance > 0.02 ):
+                    act = random.choice(['Heal','Mine','Attack','Wait'])
+                kid.output = msg, act
             print "    %s and %s Made %s." % (mom.identifier, dad.identifier, kid.identifier )
             #print kid
             kids.append( kid )

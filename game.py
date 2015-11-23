@@ -231,6 +231,7 @@ class Mine:
         """Check the current board string to update mine owner"""
         if '-' == tiles[self._owner_char_index]:
             self.owner = None
+            self.me = False
         else:
             self.owner = int(tiles[self._owner_char_index])
             if (int(self.owner) == me_ident):
@@ -242,10 +243,8 @@ class Mine:
         """Value of a mine is the distance from the player minus that mines value, -2 if it is someone else's mine currently"""
         if ( None == self.path ):
             self.value = 999
-        elif ( None == self.owner ):
-            self.value = len(self.path) - self.neighbor_value
         elif ( not self.me ):
-            self.value = len(self.path) - 1 - self.neighbor_value
+            self.value = len(self.path) - self.neighbor_value
         else:
             self.value = 999
         if (self.value < 0 ):
@@ -282,7 +281,7 @@ class Board:
         self.mines = {}
         self.mines_list = []
         self.tiles = self._parseTiles(board['tiles'])
-        self.define_mine_neighbor_value()
+        #self.define_mine_neighbor_value()
 
 
     def define_mine_neighbor_value(self):
