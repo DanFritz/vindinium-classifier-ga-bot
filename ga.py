@@ -18,7 +18,7 @@ def step_generation( classifiers ):
         compactify(classifiers)
         #for c in classifiers:
             #print c
-        classifiers = kill_the_weak( classifiers, len(classifiers) - 500 )
+        classifiers = kill_the_weak( classifiers, len(classifiers) - 1000 )
         breeders = select_breeders( classifiers, 20 )
         young = create_offspring( breeders )
         classifiers.extend(young)
@@ -144,11 +144,8 @@ def create_offspring( breeders ):
             if ( mutation_chance < 0.04 and mutation_chance > 0.02 ):
                 msg, act = kid.output
                 if ( mutation_chance < 0.03 and mutation_chance > 0.02 ):
-                    if ( random.random() < 0.1 ):
-                        msg = Message()
-                        msg.classifier_message()
-                    else:
-                        msg = None
+                    msg = Message()
+                    msg.classifier_message()
                 elif ( mutation_chance < 0.04 and mutation_chance > 0.02 ):
                     act = random.choice(['Heal','Mine','Attack','Wait'])
                 kid.output = msg, act

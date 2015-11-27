@@ -71,16 +71,17 @@ def run_game(server_url, key, mode, turns, bot):
     while not is_finished(state):
         # Some nice output ;)
         turn += 1
-        gold_totals = "    \r" + str(turn) + \
-                " : " + str(bot.game.hero.gold) + \
-                " " + str(bot.game.enemies_list[0].gold) + \
-                " " + str(bot.game.enemies_list[1].gold) + \
-                " " + str(bot.game.enemies_list[2].gold) + \
-                " " + str(len(bot.matches)) + \
-                " " + bot.action.rjust(8) + \
-                " " + str(len(bot.input_interface))
+        #gold_totals = "    \r" + str(turn)
+        gold_totals = str(turn)
+        gold_totals += " : " + str(bot.game.hero.gold)
+        gold_totals += " " + str(bot.game.enemies_list[0].gold)
+        gold_totals += " " + str(bot.game.enemies_list[1].gold)
+        gold_totals += " " + str(bot.game.enemies_list[2].gold)
+        gold_totals += " " + bot.action.rjust(8)
+        gold_totals += " " + str(len(bot.matches))
         #sys.stdout.write('.')
         sys.stdout.write(gold_totals)
+        print ""
         
         sys.stdout.flush()
 

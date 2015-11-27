@@ -36,44 +36,62 @@ class ClassifierSystem:
         else:
             c.strength = 100
 
-        # Set condition
+        # Set condition(s)
         elements = range(len(Message.game_msg_index))
         random.shuffle(elements)
         elements_specifity = [ random.randint(1,5) for x in xrange(len(Message.game_msg_index))]
         c.specifity = 0
 
         # Create the condition
-        condition_num = 0
         for i,value in enumerate(elements):
             c.specifity += 6 - elements_specifity[i]
-            c.conditions[condition_num][value] = \
+            c.conditions[0][value] = \
                 random.sample(xrange(0,5),elements_specifity[i] )
 
             # Ensure message's value is in the condition
             if ( message != None ):
-                if ( message.status[value] not in c.conditions[condition_num][value] ):
-                    c.conditions[condition_num][value][0] = message.status[value]
+                if ( message.status[value] not in c.conditions[0][value] ):
+                    c.conditions[0][value][0] = message.status[value]
 
-            c.conditions[condition_num][value].sort()
+            c.conditions[0][value].sort()
 
             # Stop adding to the condition sometime after you have > min_specifity
             if ( c.specifity > min_specifity ):
                 if ( random.random() < float(i) / float(len(Message.game_msg_index) ) ):
                     break
-            if ( random.random() < 0.01 and c.specifity < min_specifity * 0.3 and len(c.conditions) == 1 ):
+            if ( random.random() < 0.01 and c.specifity < min_specifity * 0.3 ):
                 c.conditions.append( [ None ] * len( Message.game_msg_index) )
-                condition_num +=1
+                break
+
+        if ( len(c.conditions) == 2 ):
+            elements = range(len(Message.game_msg_index))
+            random.shuffle(elements)
+            elements_specifity = [ random.randint(1,5) for x in xrange(len(Message.game_msg_index))]
+            # Create the condition
+            for i,value in enumerate(elements):
+                c.specifity += 6 - elements_specifity[i]
+                c.conditions[1][value] = \
+                    random.sample(xrange(0,5),elements_specifity[i] )
+
+                # Ensure message's value is in the condition
+                if ( message != None ):
+                    if ( message.status[value] not in c.conditions[1][value] ):
+                        c.conditions[1][value][0] = message.status[value]
+
+                c.conditions[1][value].sort()
+
+                # Stop adding to the condition sometime after you have > min_specifity
+                if ( c.specifity > min_specifity ):
+                    if ( random.random() < float(i) / float(len(Message.game_msg_index) ) ):
+                        break
+                if ( random.random() < 0.01 and c.specifity < min_specifity * 0.3 ):
+                    c.conditions.append( [ None ] * len( Message.game_msg_index) )
+                    break
 
         # Set output
-        if (random.random() < 0.1):
-            while True:
-                output_message = Message()
-                output_message.classifier_message()
-                output_message.emitter = c
-                if ( not c.self_activates() ):
-                    break
-        else:
-            output_message = None
+        output_message = Message()
+        output_message.classifier_message()
+        output_message.emitter = c
         c.output = output_message, random.choice(['Heal','Mine','Attack','Wait'])
         return c
         
@@ -146,7 +164,7 @@ class ClassifierSystem:
         upto = 0
         for strength , c, sources in choices:
             if upto + strength > r:
-                return strength, c.output[1]
+                return strength, c, sources
             upto += strength
         return None
 
@@ -188,7 +206,7 @@ class ClassifierSystem:
         if ( self.game.hero.pos != self.expected_pos
              and self.game.hero.pos == self.game.hero.spawn ):
 
-             self._disburse(-15 * self.prev_mines )
+             self._disburse(-10 * self.prev_mines )
              self.active = deque([])
         # If you didn't die, pay active classifers by the amount of gold gained
         else:
@@ -226,7 +244,8 @@ class ClassifierSystem:
         else:
             reward = 3
         for c in self.classifiers:
-            c.pay(reward*c.game_activations)
+            if ( c.game_activations > 0 ):
+                c.pay(reward*50)
 
 
 
@@ -262,15 +281,10 @@ class ClassifierSystem:
                 #print c.identifier,
                 #print ",",
                 message, action = c.output
-                if ( None == action ):
-                    c.pay(c.bid())
-                    if ( None != message ):
-                        self.input_interface.append( message )
-                else:
-                    self.matches.append( ( c.bid(), c, c.source_classifiers ) )
+                self.matches.append( ( c.bid(), c, c.source_classifiers ) )
         #print ""
 
-        # if not enough matches, create one
+        # if not enough matches, create some
         while ( len( self.matches ) < 3 ):
             c = self._create_classifier(messages[-1])
             self.classifiers.append(c)
@@ -278,28 +292,31 @@ class ClassifierSystem:
             #print "CREATED NEW CLASSIFIER"
             #print self.classifiers[-1]
 
-        # Choose an action from the matches to output
-        choice = self._weighted_choice(self.matches)
-        #print "choice",
-        #print choice
+        # Accept the top 3 bids
+        winners = []
+        while ( len(winners) < 3 ):
+            win = self._weighted_choice(self.matches)
+            winners.append(win)
+            self.matches.remove(win)
 
-        # activate all of the classifiers that specified the chosen action
-        # and send any output messages to the input interface
+        # Winner's bids pay their sources and activate
+        activated = []
+        for win in winners:
+            bid, c, sources = win
+            c.activate(bid)
+            activated.append((c,sources))
+            for source in sources:
+                source.pay( bid / float(len(sources)) )
+            self.input_interface.append( c.output[0] )
+        self.active.append(activated)
+
+        # Choose an action from the matches to output
+        choice = self._weighted_choice(winners)
         if ( None != choice ):
-            paid, winner = choice
-            activated = []
-            for m in self.matches:
-                bid, c, source_classifiers = m
-                if c.output[1] == winner:
-                    activated.append( (c, source_classifiers ) )
-                    c.activate(paid)
-                    message, action = c.output
-                    if ( None != message ):
-                        self.input_interface.append( message )
-            self.active.append(activated)
-            return action
+            return choice[1].output[1]
         else:
             return 'None'
+
     def new_game(self):
         """Initialize the bot with a new game."""
         for c in self.classifiers:
